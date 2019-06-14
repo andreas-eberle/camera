@@ -21,6 +21,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
@@ -35,6 +36,7 @@ import android.os.HandlerThread
 import android.util.DisplayMetrics
 import android.util.Log
 import android.util.Rational
+import android.util.Size
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.TextureView
@@ -211,7 +213,9 @@ class CameraFragment : Fragment(), CoroutineScope {
 
         override fun onImageSaved(photoFile: File) {
             Log.d(TAG, "Photo capture succeeded: ${photoFile.absolutePath}")
-
+			val newImage = BitmapFactory.decodeFile(photoFile.toString())
+			Log.i("XXXX", "Captured image has resolution ${newImage.width} x ${newImage.height}")
+			newImage.recycle()
 
             // We can only change the foreground Drawable using API level 23+ API
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -281,13 +285,15 @@ class CameraFragment : Fragment(), CoroutineScope {
         CameraX.unbindAll()
 
         val metrics = DisplayMetrics().also { viewFinder.display.getRealMetrics(it) }
-        val screenAspectRatio = Rational(metrics.widthPixels, metrics.heightPixels)
+        val screenSize = Size(1080,1920)
+        val screenAspectRatio = Rational(screenSize.width, screenSize.height)
         Log.d(javaClass.simpleName, "Metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
 
         // Set up the view finder use case to display camera preview
         val viewFinderConfig = PreviewConfig.Builder().apply {
             setLensFacing(lensFacing)
             // We request aspect ratio but no resolution to let CameraX optimize our use cases
+			setTargetResolution(screenSize)
             setTargetAspectRatio(screenAspectRatio)
             // Set initial target rotation, we will have to call this again if rotation changes
             // during the lifecycle of this use case
@@ -303,6 +309,7 @@ class CameraFragment : Fragment(), CoroutineScope {
             setCaptureMode(CaptureMode.MIN_LATENCY)
             // We request aspect ratio but no resolution to match preview config but letting
             // CameraX optimize for whatever specific resolution best fits requested capture mode
+            setTargetResolution(screenSize)
             setTargetAspectRatio(screenAspectRatio)
             // Set initial target rotation, we will have to call this again if rotation changes
             // during the lifecycle of this use case
@@ -318,6 +325,8 @@ class CameraFragment : Fragment(), CoroutineScope {
             val analyzerThread = HandlerThread("LuminosityAnalysis").apply { start() }
             setCallbackHandler(Handler(analyzerThread.looper))
             // In our analysis, we care more about the latest image than analyzing *every* image
+            setTargetResolution(screenSize)
+            setTargetAspectRatio(screenAspectRatio)
             setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
             // Set initial target rotation, we will have to call this again if rotation changes
             // during the lifecycle of this use case
@@ -451,6 +460,8 @@ class CameraFragment : Fragment(), CoroutineScope {
          * @return the image analysis result
          */
         override fun analyze(image: ImageProxy, rotationDegrees: Int) {
+			Log.i("XXXX", "Analysis image has ${image.width} x ${image.height} pixels")
+
             // If there are no listeners attached, we don't need to perform analysis
             if (listeners.isEmpty()) return
 

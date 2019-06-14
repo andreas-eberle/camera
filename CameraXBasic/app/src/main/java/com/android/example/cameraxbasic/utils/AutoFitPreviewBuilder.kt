@@ -19,6 +19,7 @@ package com.android.example.cameraxbasic.utils
 import android.content.Context
 import android.graphics.Matrix
 import android.hardware.display.DisplayManager
+import android.util.Log
 import android.util.Size
 import android.view.Display
 import android.view.Surface
@@ -86,6 +87,8 @@ class AutoFitPreviewBuilder private constructor(config: PreviewConfig,
 
         // Every time the view finder is updated, recompute layout
         useCase.onPreviewOutputUpdateListener = Preview.OnPreviewOutputUpdateListener {
+            Log.i("XXXX", "Preview Image has ${it.textureSize.width}x${it.textureSize.height} pixels")
+
             val viewFinder =
                     viewFinderRef.get() ?: return@OnPreviewOutputUpdateListener
 
